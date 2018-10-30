@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secct</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      body{
+        margin-top: 30px;
+      }
+      #messageArea{
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="userArea" class="row">
+          <div class="col-md-12">
+            <form id="userForm">
+              <div class="form-group">
+                <label>Enter Name</label>
+                <input type="text" class="form-control" id="username"></textarea>
+                <br/ >
+                <input type="submit" class="btn btn-primary" value="Login"/>
+              </div>
+            </form>
+          </div>
+      </div>
+      <div id="messageArea" class="row">
+            <div class="row">
+                    <div id="videoPlayer" class="col-md-8">
+                        <div id="video-wrapper">
+                            <div id="player" style="pointer-events: none"></div>
+                        </div>
+                        <div id="payerControl">
+                            <div id="playerControlButtons" style="float: left;">
+                                <button id="playButton" type="button" class="btn btn-default" aria-label="Left Align">
+                                    <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
+                                </button>
+                                <button id="stopButton" type="button" class="btn btn-default" aria-label="Left Align">
+                                    <span class="glyphicon glyphicon-pause" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                            <div id="playerControlProgress" class="progress active" style="width: 74%; float: left; margin-top: 7px; margin-left: 2.5%">
+                                <div id="playerControlProgressBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <button id="fullscreenButton" type="button" class="btn btn-default" style="margin-left: 2.5%" aria-label="Left Align">
+                                <span class="glyphicon glyphicon glyphicon-fullscreen" aria-hidden="true"></span>
+                            </button>                  
+                        </div>
+                        <script>
+                            //Connect the Socket
+                            var socket = io.connect();
+                            //Load the Youtube Player and make some basics Settings (disable controls, set the Video id and Stuff like that)
+                            var tag = document.createElement('script');
+                            tag.src = "https://www.youtube.com/iframe_api";
+                            var firstScriptTag = document.getElementsByTagName('script')[0];
+                            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                            var player;
+                            function onYouTubeIframeAPIReady() {
+                                player = new YT.Player('player', {
+                                    height: '480',
+                                    width: '720',
+                                    videoId: '',
+                                    playerVars: { 
+                                        'controls': 0,
+                                        'disablekb': 1,
+                                        'modestbranding': 1,
+                                        'rel': 0,
+                                        'showinfo': 0,
+                                        'fs': 1,
+                                        'modestbranding': 0
+                                    },
+                                    events: {
+                                        'onReady': onPlayerReady,
+                                        'onStateChange': onPlayerStateChange
+                                    }
+                                });
+                            }
+                            
+                            //Global Variables for the Progress Bar
+                            var counter = 0;
+                            var intervalId;
+                            var time;
+                            var vid = "02AXP5eI6PE";
+        
+                            //Enable Basic Functionalities when the Page is ready
+                            function onPlayerReady(event) {
+                                //Listener for the Fullscreenmode       
+                                document.addEventListener('fullscreenchange', exitHandler);
+                                document.addEventListener('webkitfullscreenchange', exitHandler);
+                                document.addEventListener('mozfullscreenchange', exitHandler);
+                                document.addEventListener('MSFullscreenChange', exitHandler);
+                                //Update Max Value Progressbar
+                                time = player.getDuration();
+                                updateMaxValueProgressbar()
+                                //Set event listener if Progressbar get clicked
+                                document.getElementById('playerControlProgress').addEventListener('click', function (e) {
+                                    stopProgressBar();
+                                    //Get the x of the click and divide it with the length of the whole element. Then multipli it with the timebar
+                                    counter = ((e.x - $(this).offset().left) / $(this).width()) * time;
+                                    socket.emit('start video socket', counter);
+                                    runProgressBar();
+                                    player.seekTo(counter);
+                                    player.playVideo();
+                                });
+                                //Play the Video
+                                socket.emit('start video socket', 0);
+                                event.target.playVideo();
+                            }
+        
+                            //Listen to Youtube Playerevents and handle those requests
+                            function onPlayerStateChange(event) {
+                                if(event.data==YT.PlayerState.PAUSED){ 
+                                    $("#playButton").attr("disabled",false);
+                                    $("#stopButton").attr("disabled",true);
+                                    stopProgressBar();
+                                }
+                                else if(event.data==YT.PlayerState.PLAYING){
+                                    $("#playButton").attr("disabled",true);
+                                    $("#stopButton").attr("disabled",false);
+                                    stopProgressBar();
+                                    if(player.getDuration() != time){
+                                        time = player.getDuration();
+                                        updateMaxValueProgressbar()
+                                    }
+                                    runProgressBar();
+                                }
+                                else if(event.data == YT.PlayerState.ENDED){
+                                    counter = 0;
+                                    $("#playButton").attr("disabled",false);
+                                    $("#stopButton").attr("disabled",true);
+                                    stopProgressBar();
+                                    player.stopVideo();
+                                }
+                            }
+                            
+                            //Button click event which starts the video
+                            $("#playButton").click( function()
+                                {
+                                    socket.emit('start video socket', counter);
+                                    player.playVideo();
+                                }
+                            );
+        
+                            //Button click event which stops the video
+                            $("#stopButton").click( function()
+                                {
+                                    socket.emit('stop video socket');
+                                    player.pauseVideo();
+                                }
+                            );
+        
+                            //Fullscreen
+                            $("#fullscreenButton").click( function()
+                                {
+                                    player.setSize(1920, 1080);
+                                    var e = document.getElementById("video-wrapper");
+                                    if (e.requestFullscreen) {
+                                        e.requestFullscreen();
+                                    } else if (e.webkitRequestFullscreen) {
+                                        e.webkitRequestFullscreen();
+                                    } else if (e.mozRequestFullScreen) {
+                                        e.mozRequestFullScreen();
+                                    } else if (e.msRequestFullscreen) {
+                                        e.msRequestFullscreen();
+                                    }
+                                }
+                            );
+        
+                            //Function to run the Progress Bar
+                            function runProgressBar(){
+                                intervalId = setInterval(function(){ 
+                                    counter += 1; 
+                                    updateProgressBar();
+                                }, 1000);
+                            }
+        
+                            //Function to update the Progressbar
+                            function updateProgressBar(){
+                                calculatedCounter = calculateProzent().toString() + '%';
+                                $('#playerControlProgressBar').attr('aria-valuenow', calculatedCounter).css('width',calculatedCounter);
+                            }
+        
+                            //Function to stop the Progress Bar
+                            function stopProgressBar(){
+                                clearInterval(intervalId);
+                            }
+        
+                            //Function to exit the Fullscreen View
+                            function exitHandler() {
+                                if (!document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
+                                    player.setSize(720, 480);
+                                }
+                            }  
+        
+                            //Function to update the Max Value of the Progressbar
+                            function updateMaxValueProgressbar(){
+                                $('#playerControlProgressBar').attr('aria-valuemax', time);
+                            }
+        
+                            /* 
+                            *
+                            * Callback Functions
+                            * 
+                            */
+                            
+                            socket.on('start video', function(data){
+                                counter = data;
+                                player.seekTo(counter);
+                                player.playVideo();
+                            })
+        
+                            socket.on('stop video', function(){
+                                player.pauseVideo();
+                            });
+        
+                            socket.on('change video', function(vid){
+                                player.loadVideoById(vid);
+                            });
+        
+                            socket.on('sync video', function(vid, counter){
+                                player.loadVideoById(vid);
+                                player.seekTo(counter);
+                                updateProgressBar();
+                                this.vid = vid;
+                                this.counter = counter;
+                            });
+        
+                            /*
+                            *
+                            * Math Functions
+                            * 
+                            */
+        
+                            //Calculate Prozent
+                           function calculateProzent(){
+                               return (counter / time) * 100;
+                           }
+        
+                        </script>
+                    </div>
+                    <div id="searchBar" col-md-4>
+                        <div id="formContainer">
+                            <form id="searchForm" class="form-inline my-2 my-lg-0" style="float: left;">
+                                <input id="searchValue" class="form-control mr-sm-2" type="search" placeholder="Enter Youtube Link" aria-label="Search">
+                                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                            </form>
+                            <form id="syncForm" style="float: left; margin-left: 5px;" class="form-inline my-2 my-lg-0">
+                                <button type="submit" class="btn btn-outline-success my-2 my-sm-0" >Sync</button>
+                            </form>
+                            <div style="float: left; margin-left: 5px; margin-top: 15px; width: 27%" class="well form-inline my-2 my-lg-0">
+                                <h3>Online Users</h3>
+                                <ul class="list-group" id="users">
+                    
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                        //Elements
+                        var $searchForm = $('#searchForm');
+                        var $searchValue = $('#searchValue');
+                        var $syncForm = $('#syncForm')
+        
+                        //Search a new Video
+                        $searchForm.submit(function(e){
+                            e.preventDefault();
+                            if(checkYoutubeLink($searchValue.val()) != false){
+                                vid = getYoutubeId($searchValue.val());
+                                if(vid != $searchValue.val()){
+                                    socket.emit('change video socket', vid);
+                                }
+                            }
+                        });        
+        
+                        //Synchronise the videos of al Members of the Session 
+                        $syncForm.submit(function(e){
+                            e.preventDefault();
+                            socket.emit('sync video socket', vid, counter);
+                        });
+        
+                        //Check if its an valid youtube link
+                        function checkYoutubeLink(url) {
+                            var p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
+                            return (url.match(p)) ? RegExp.$1 : false;
+                        }
+        
+                        //Get the VideoId out of an Youtube Link
+                        function getYoutubeId(url){
+                            var ID = '';
+                            url = url.replace(/(>|<)/gi,'').split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/)/);
+                            if(url[2] !== undefined) {
+                                ID = url[2].split(/[^0-9a-z_\-]/i);
+                                ID = ID[0];
+                            }
+                            else {
+                                ID = url;
+                            }
+                                return ID;
+                        }
+        
+                    </script>
+                  </div>
+        <div class="col-md-12">
+            <form id="messageForm">
+            <div class="form-group">
+                <label>Enter Messages</label>
+                <input type="text" class="form-control" id="message">
+                <br/>
+                <input type="submit" class="btn btn-primary" value="Send Message"/>
+            </div>
+            </form>
+          <div class="chat" id="chat" style="overflow-y: scroll;height: 300px;"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(function(){
+        var socket = io.connect();
+        //HTML Elements
+        var $messageArea = $('#messageArea');
+        var $messageForm = $('#messageForm');
+        var $message = $('#message');
+        var $chat = $('#chat');
+        var $userArea = $('#userArea');
+        var $userForm = $('#userForm');
+        var $username = $('#username');
+        var $users = $('#users');
+        var $firstChild
+        $messageForm.submit(function(e){
+          e.preventDefault();
+          socket.emit('send message', $message.val());
+          $message.val('');
+        })
+        $userForm.submit(function(e){
+          e.preventDefault();
+          socket.emit('new user', $username.val());
+          $username.val('');
+        })
+        socket.on('new message', function(data){
+          $chat.append('<div class="well"><strong>' + data.user + ': </strong>' + data.msg + '</div>');
+        });
+        socket.on('get users', function(data){
+          $userArea.hide();
+          $messageArea.show();
+          var html = '';
+          for(i = 0; i< data.length; i++){
+            html += '<li class="list-group-item">' + data[i] + '</li>'
+          }
+          $users.html(html);
+        });
+      });
+    </script>
+  </body>
+</html>
