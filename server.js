@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
+app.use("/scripts", express.static(__dirname + '/sites/'));
 
 users = [];
 connections = [];
@@ -20,30 +21,24 @@ io.sockets.on('connection', function(socket){
 
     //Disconnect
     socket.on('disconnect', function(data){
-    users.splice(users.indexOf(socket.username), 1);
-    updateUsernames();
-    connections.splice(connections.indexOf(socket), 1);
-    console.log('Disconnected: %s sockets connected', connections.length)
-    });
-
-    //Send Messages
-    socket.on('send message', function(data){
-    if(data != ""){
-        io.sockets.emit('new message', {msg: data, user: socket.username });
-    }
+      users.splice(users.indexOf(socket.username), 1);
+      updateUsernames();
+      connections.splice(connections.indexOf(socket), 1);
+      console.log('Disconnected: %s sockets connected', connections.length)
     });
 
     //New User
     socket.on('new user', function(data){
-    if(data != ""){
-        socket.username = data;
-        users.push(socket.username);
-        updateUsernames();
-    }
+      if(data != ""){
+          socket.username = data;
+          users.push(socket.username);
+          updateUsernames();
+      }
     });
 
+    //Update the Usernamelist
     function updateUsernames(){
-    io.sockets.emit('get users', users)
+      io.sockets.emit('get users', users)
     }
 
     //Start or resume a video
@@ -65,4 +60,11 @@ io.sockets.on('connection', function(socket){
     socket.on('sync video socket', function(vid, counter){
         io.sockets.emit('sync video', vid, counter);
     })
+
+    //Send Messages
+    socket.on('send message', function(data){
+      if(data != ""){
+          io.sockets.emit('new message', {msg: data, user: socket.username });
+      }
+    });
 })
