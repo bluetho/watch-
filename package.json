@@ -4,12 +4,15 @@
   "description": "Application to watch Youtube Videos together",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "author": "Tim D'Amato",
   "license": "ISC",
   "dependencies": {
     "express": "*",
     "socket.io": "*"
+  },
+  "devDependencies": {
+    "jest": "^23.6.0"
   }
 }

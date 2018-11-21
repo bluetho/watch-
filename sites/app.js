@@ -261,7 +261,7 @@ $syncForm.submit(function(e) {
 //Check if its an valid youtube link
 function checkYoutubeLink(url) {
     var p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
-    return (url.match(p)) ? RegExp.$1 : false;
+    return (url.match(p)) ? true : false;
 }
 
 //Get the VideoId out of an Youtube Link
