@@ -10,7 +10,7 @@ app.use(favicon(__dirname + '/images/favicon.png'));
 users = [];
 connections = [];
 
-server.listen(process.env.PORT | 3000);
+server.listen(process.env.PORT || 3000);
 console.log("Server has started")
 
 app.get('/', function(req, res){
