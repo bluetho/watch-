@@ -9,7 +9,7 @@
   "author": "Tim D'Amato",
   "license": "ISC",
   "dependencies": {
-    "express": "*",
+    "express": "^4.16.4",
     "socket.io": "*"
   },
   "devDependencies": {

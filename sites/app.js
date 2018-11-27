@@ -8,20 +8,13 @@ $(function() {
     var $userForm = $('#userForm');
     var $username = $('#username');
     var $users = $('#users');
+    //Variables
     var $firstChild
     var blackList = ['lars bischhausen', 'gibb', 'schalke', 'anal', 'anus', 'arse', 'ass', 'ass fuck', 'ass hole', 'assfucker', 'asshole', 'assshole', 'bastard', 'bitch', 'black cock', 'bloody hell', 'boong', 'cock', 'cockfucker', 'cocksuck', 'cocksucker', 'coon', 'coonnass', 'crap', 'cunt', 'cyberfuck', 'damn', 'darn', 'dick', 'dirty', 'douche', 'dummy', 'erect', 'erection', 'erotic', 'escort', 'fag', 'faggot', 'fuck', 'Fuck off', 'fuck you', 'fuckass', 'fuckhole', 'god damn', 'gook', 'hard core', 'hardcore', 'homoerotic', 'hore', 'lesbian', 'lesbians', 'mother fucker', 'motherfuck', 'motherfucker', 'negro', 'nigger', 'orgasim', 'orgasm', 'penis', 'penisfucker', 'piss', 'piss off', 'porn', 'porno', 'pornography', 'pussy', 'retard', 'sadist', 'sex', 'sexy', 'shit', 'slut', 'son of a bitch', 'suck', 'tits', 'viagra', 'whore', 'xxx']
-    $messageForm.submit(function(e) {
-        e.preventDefault();
-        var isWordOnBlackList = false;
-        for (var i = 0; i < blackList.length; i++) {
-            if (blackList[i].toUpperCase() == $message.val().toUpperCase()) {
-                isWordOnBlackList = true;
-                break;
-            }
-        }
-        socket.emit('send message', $message.val());
-        $message.val('');
-    })
+    
+    /**
+     * Send a new user to the server
+     */
     $userForm.submit(function(e) {
         e.preventDefault();
         var isWordOnBlackList = false;
@@ -32,13 +25,39 @@ $(function() {
             }
         }
         if (isWordOnBlackList == false) {
-            socket.emit('new user', $username.val());
+            socket.emit('new user', escape($username.val()));
         }
         $username.val('');
     })
+
+    /**
+     * Send a message to the server.
+     */
+    $messageForm.submit(function(e) {
+        e.preventDefault();
+        var isWordOnBlackList = false;
+        for (var i = 0; i < blackList.length; i++) {
+            if (blackList[i].toUpperCase() == $message.val().toUpperCase()) {
+                isWordOnBlackList = true;
+                break;
+            }
+        }
+        socket.emit('send message', escape($message.val()));
+        $message.val('');
+    })
+
+    /**
+     * Enter a message to the html
+     * @param {object} data - Object with user and msg
+     */
     socket.on('new message', function(data) {
         $chat.append('<div class="well"><strong>' + data.user + ': </strong>' + data.msg + '</div>');
     });
+
+    /**
+     * Enter a message to the html
+     * @param {[string]} data - Array with users
+     */
     socket.on('get users', function(data) {
         $userArea.hide();
         $messageArea.show();
@@ -49,6 +68,7 @@ $(function() {
         $users.html(html);
     });
 });
+
 //Connect the Socket
 var socket = io.connect();
 //Load the Youtube Player and make some basics Settings (disable controls, set the Video id and Stuff like that)
@@ -64,6 +84,10 @@ var intervalId;
 var time;
 var vid = "";
 
+
+/**
+ * Load the youtubeplayer
+ */
 function onYouTubeIframeAPIReady() {
     player = new YT.Player('player', {
         height: '480',
@@ -85,7 +109,10 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-//Enable Basic Functionalities when the Page is ready
+/**
+ * Enable Basic Functionalities when the Page is ready
+ * @param {object} event - Event object
+ */
 function onPlayerReady(event) {
     //Listener for the Fullscreenmode
     document.addEventListener('fullscreenchange', exitHandler);
@@ -110,7 +137,10 @@ function onPlayerReady(event) {
     event.target.playVideo();
 }
 
-//Listen to Youtube Playerevents and handle those requests
+/**
+ * Listen to Youtube Playerevents and handle those requests
+ * @param {object} event - Event object
+ */
 function onPlayerStateChange(event) {
     if (event.data == YT.PlayerState.PAUSED) {
         $("#playButton").attr("disabled", false);
@@ -134,19 +164,25 @@ function onPlayerStateChange(event) {
     }
 }
 
-//Button click event which starts the video
+/**
+ * Button click event which starts the video
+ */
 $("#playButton").click(function() {
     socket.emit('start video socket', counter);
     player.playVideo();
 });
 
-//Button click event which stops the video
+/**
+ * Button click event which stops the video
+ */
 $("#stopButton").click(function() {
     socket.emit('stop video socket');
     player.pauseVideo();
 });
 
-//Fullscreen
+/**
+ * Button to make a video fullscreen
+ */
 $("#fullscreenButton").click(function() {
     player.setSize(1920, 1080);
     var e = document.getElementById("video-wrapper");
@@ -161,7 +197,9 @@ $("#fullscreenButton").click(function() {
     }
 });
 
-//Function to run the Progress Bar
+/**
+ * Function to run the Progress Bar
+ */
 function runProgressBar() {
     intervalId = setInterval(function() {
         counter += 1;
@@ -169,32 +207,40 @@ function runProgressBar() {
     }, 1000);
 }
 
-//Function to update the Progressbar
+/**
+ * Function to update the Progressbar
+ */
 function updateProgressBar() {
     calculatedCounter = calculateProzent().toString() + '%';
     $('#playerControlProgressBar').attr('aria-valuenow', calculatedCounter).css('width', calculatedCounter);
 }
 
-//Function to stop the Progress Bar
+/**
+ * Function to stop the Progress Bar
+ */
 function stopProgressBar() {
     clearInterval(intervalId);
 }
 
-//Function to exit the Fullscreen View
+/**
+ * Function to exit the Fullscreen View
+ */
 function exitHandler() {
     if (!document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
         player.setSize(720, 480);
     }
 }
 
-//Function to update the Max Value of the Progressbar
+/**
+ * Function to update the Max Value of the Progressbar
+ */
 function updateMaxValueProgressbar() {
     $('#playerControlProgressBar').attr('aria-valuemax', time);
 }
 
 /*
  *
- * Callback Functions
+ * Callback Functions. Make things on the player
  *
  */
 
@@ -225,7 +271,9 @@ socket.on('sync video', function(vid, counter) {
  *
  */
 
-//Calculate Prozent
+/**
+ * Calculate Prozent
+ */
 function calculateProzent() {
     return (counter / time) * 100;
 }
@@ -241,7 +289,10 @@ var $searchForm = $('#searchForm');
 var $searchValue = $('#searchValue');
 var $syncForm = $('#syncForm')
 
-//Search a new Video
+/**
+ * Search a new Video
+ * @param {object} e - Event object
+ */
 $searchForm.submit(function(e) {
     e.preventDefault();
     if (checkYoutubeLink($searchValue.val()) != false) {
@@ -252,19 +303,28 @@ $searchForm.submit(function(e) {
     }
 });
 
-//Synchronise the videos of al Members of the Session
+/**
+ * Synchronise the videos of al Members of the Session
+ * @param {object} e - Event object
+ */
 $syncForm.submit(function(e) {
     e.preventDefault();
     socket.emit('sync video socket', vid, counter);
 });
 
-//Check if its an valid youtube link
+/**
+ * Check if its an valid youtube link
+ * @param {string} url - Youtube url to test
+ */
 function checkYoutubeLink(url) {
     var p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
     return (url.match(p)) ? true : false;
 }
 
-//Get the VideoId out of an Youtube Link
+/**
+ * Get the VideoId out of an Youtube Link
+ * @param {string} url - Youtube url to test
+ */
 function getYoutubeId(url) {
     var ID = '';
     url = url.replace(/(>|<)/gi, '').split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/)/);
