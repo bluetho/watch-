@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.16.4",
+    "express-favicon": "^2.0.1",
     "socket.io": "*"
   },
   "devDependencies": {

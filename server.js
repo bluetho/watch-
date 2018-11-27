@@ -1,8 +1,11 @@
 var express = require('express');
+const favicon = require('express-favicon');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
+
 app.use("/scripts", express.static(__dirname + '/sites/'));
+app.use(favicon(__dirname + '/images/favicon.png'));
 
 users = [];
 connections = [];
