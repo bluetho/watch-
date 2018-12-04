@@ -11,7 +11,8 @@
   "dependencies": {
     "express": "^4.16.4",
     "express-favicon": "^2.0.1",
-    "socket.io": "*"
+    "socket.io": "*",
+    "xss": "^1.0.3"
   },
   "devDependencies": {
     "jest": "^23.6.0"

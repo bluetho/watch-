@@ -25,7 +25,9 @@ $(function() {
             }
         }
         if (isWordOnBlackList == false) {
-            socket.emit('new user', escape($username.val()));
+            $userArea.hide();
+            $messageArea.show();
+            socket.emit('new user', filterXSS($username.val()));
         }
         $username.val('');
     })
@@ -42,7 +44,7 @@ $(function() {
                 break;
             }
         }
-        socket.emit('send message', escape($message.val()));
+        socket.emit('send message', filterXSS($message.val()));
         $message.val('');
     })
 
@@ -59,8 +61,6 @@ $(function() {
      * @param {[string]} data - Array with users
      */
     socket.on('get users', function(data) {
-        $userArea.hide();
-        $messageArea.show();
         var html = '';
         for (i = 0; i < data.length; i++) {
             html += '<li class="list-group-item">' + data[i] + '</li>'
@@ -254,15 +254,16 @@ socket.on('stop video', function() {
     player.pauseVideo();
 });
 
-socket.on('change video', function(vid) {
+socket.on('change video', function(videoid) {
+    vid = videoid;
     player.loadVideoById(vid);
 });
 
-socket.on('sync video', function(vid, counter) {
+socket.on('sync video', function(videoid, counterParam) {
+    vid = videoid;
+    counter = counterParam;
     player.loadVideoById(vid, counter);
     updateProgressBar();
-    this.vid = vid;
-    this.counter = counter;
 });
 
 /*
@@ -296,9 +297,9 @@ var $syncForm = $('#syncForm')
 $searchForm.submit(function(e) {
     e.preventDefault();
     if (checkYoutubeLink($searchValue.val()) != false) {
-        vid = getYoutubeId($searchValue.val());
-        if (vid != $searchValue.val()) {
-            socket.emit('change video socket', vid);
+        this.vid = getYoutubeId($searchValue.val());
+        if (this.vid != $searchValue.val()) {
+            socket.emit('change video socket', this.vid);
         }
     }
 });
@@ -309,6 +310,7 @@ $searchForm.submit(function(e) {
  */
 $syncForm.submit(function(e) {
     e.preventDefault();
+    console.log(vid + " " + counter)
     socket.emit('sync video socket', vid, counter);
 });
 
